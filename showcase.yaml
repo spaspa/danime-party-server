@@ -1,6 +1,6 @@
 type: "runtime"
 
-startup: 'go mod init'
+startup: 'go mod download'
 work_dir: "."
 
 entrypoint: "go run *.go"
