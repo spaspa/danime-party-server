@@ -2,10 +2,8 @@ type: "runtime"
 
 startup: 'go mod download'
 work_dir: "."
-
 entrypoint: "go run *.go"
 
-# which port to proxy via http(80) (default: null)
 http_proxy: 8080
-
 https: "hard"
+internal: "off"
