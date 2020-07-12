@@ -7,8 +7,6 @@ import (
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
-var cert = flag.String("cert", "server.crt", "tls certificate")
-var key = flag.String("key", "server.key", "tls key")
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.URL)
@@ -30,8 +28,8 @@ func main() {
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(hub, w, r)
 	})
-	err := http.ListenAndServeTLS(*addr, *cert, *key, nil)
+	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Fatal("ListenAndServeTLS: ", err)
+		log.Fatal("ListenAndServe: ", err)
 	}
 }
