@@ -42,6 +42,8 @@ func (c *Client) handleCommand(command []string) error {
 		return c.handleCommandPause()
 	case CommandSeek:
 		return c.handleCommandSeek(command)
+	case CommandResume:
+		return c.handleCommandResume()
 	case CommandSync:
 		return c.handleCommandSync(command)
 	case CommandJoin:
@@ -108,6 +110,16 @@ func (c *Client) handleCommandSeek(command []string) error {
 		return c.sendReject("no room")
 	}
 	c.sendBroadcastToRoom(fmt.Sprintf("%s:%v", MessageSeek, videoTime))
+	return nil
+}
+
+// handleCommandResume retrieves `resume!` command from client.
+// command scheme: `resume!` -> `resume` (broadcast)
+func (c *Client) handleCommandResume() error {
+	if c.hub.rooms[c.roomId] == nil {
+		return c.sendReject("no room")
+	}
+	c.sendBroadcastToRoom(MessageResume)
 	return nil
 }
 

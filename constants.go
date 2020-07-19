@@ -2,13 +2,14 @@ package main
 
 // commands with ! corresponds to broadcast command
 const (
-	CommandPlay  = "play!"
-	CommandPause = "pause!"
-	CommandSeek  = "seek!"
-	CommandSync  = "sync"
-	CommandJoin  = "join"
-	CommandLeave = "leave"
-	CommandReady = "ready"
+	CommandPlay   = "play!"
+	CommandPause  = "pause!"
+	CommandSeek   = "seek!"
+	CommandResume = "resume!"
+	CommandSync   = "sync"
+	CommandJoin   = "join"
+	CommandLeave  = "leave"
+	CommandReady  = "ready"
 )
 
 const (
@@ -21,4 +22,5 @@ const (
 	MessagePause  = "pause"
 	MessageSeek   = "seek"
 	MessageReady  = "ready"
+	MessageResume = "resume"
 )
