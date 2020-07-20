@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
 	"strconv"
 	"time"
 )
@@ -15,26 +14,22 @@ func (c *Client) sendBroadcastToRoom(message string) {
 	}
 }
 
-func (c *Client) sendTextMessage(message string) error {
-	err := c.conn.WriteMessage(
-		websocket.TextMessage,
-		[]byte(message),
-	)
-	if err != nil {
-		return ErrorUnknown
-	}
-	return nil
+func (c *Client) sendTextMessage(message string) {
+	c.send <- []byte(message)
 }
 
-func (c *Client) sendOk() error {
-	return c.sendTextMessage(MessageOk)
+func (c *Client) sendOk() {
+	c.sendTextMessage(MessageOk)
 }
 
-func (c *Client) sendReject(message string) error {
-	return c.sendTextMessage(fmt.Sprintf("%s:%s", MessageReject, message))
+func (c *Client) sendReject(message string) {
+	c.sendTextMessage(fmt.Sprintf("%s:%s", MessageReject, message))
 }
 
 func (c *Client) handleCommand(command []string) error {
+	defer c.hub.Unlock()
+	c.hub.Lock()
+
 	switch command[0] {
 	case CommandPlay:
 		return c.handleCommandPlay(command)
@@ -70,11 +65,13 @@ func (c *Client) handleCommandPlay(command []string) error {
 	playTime := currentTime + 2
 
 	if c.hub.rooms[c.roomId] == nil {
-		return c.sendReject("no room")
+		c.sendReject("no room")
+		return nil
 	}
 	for clientId := range c.hub.rooms[c.roomId] {
 		if c.hub.clients[clientId] != nil && !c.hub.clients[clientId].ready {
-			return c.sendReject("non-ready client exists")
+			c.sendReject("non-ready client exists")
+			return nil
 		}
 	}
 	c.sendBroadcastToRoom(fmt.Sprintf("%s:%v:%v", MessagePlay, videoTime, playTime))
@@ -85,7 +82,8 @@ func (c *Client) handleCommandPlay(command []string) error {
 // command scheme: `pause!` -> `pause` (broadcast)
 func (c *Client) handleCommandPause() error {
 	if c.hub.rooms[c.roomId] == nil {
-		return c.sendReject("no room")
+		c.sendReject("no room")
+		return nil
 	}
 	for clientId := range c.hub.rooms[c.roomId] {
 		if client := c.hub.clients[clientId]; client != nil {
@@ -107,7 +105,8 @@ func (c *Client) handleCommandSeek(command []string) error {
 		return ErrorBadRequest
 	}
 	if c.hub.rooms[c.roomId] == nil {
-		return c.sendReject("no room")
+		c.sendReject("no room")
+		return nil
 	}
 	c.sendBroadcastToRoom(fmt.Sprintf("%s:%v", MessageSeek, videoTime))
 	return nil
@@ -117,7 +116,8 @@ func (c *Client) handleCommandSeek(command []string) error {
 // command scheme: `resume!` -> `resume` (broadcast)
 func (c *Client) handleCommandResume() error {
 	if c.hub.rooms[c.roomId] == nil {
-		return c.sendReject("no room")
+		c.sendReject("no room")
+		return nil
 	}
 	c.sendBroadcastToRoom(MessageResume)
 	return nil
@@ -134,7 +134,8 @@ func (c *Client) handleCommandSync(command []string) error {
 		return ErrorBadRequest
 	}
 	serverTime := float64(time.Now().UnixNano()) / 1000 / 1000 / 1000
-	return c.sendTextMessage(fmt.Sprintf("%s:%v", MessageSync, serverTime-clientTime))
+	c.sendTextMessage(fmt.Sprintf("%s:%v", MessageSync, serverTime-clientTime))
+	return nil
 }
 
 // handleCommandStart retrieves `join` command from client.
@@ -150,7 +151,8 @@ func (c *Client) handleCommandJoin(command []string) error {
 		c.hub.rooms[roomId] = map[uuid.UUID]bool{c.id: true}
 	}
 	c.roomId = roomId
-	return c.sendTextMessage(fmt.Sprintf("%s:%s:%s", MessageAccept, c.id.String(), c.roomId))
+	c.sendTextMessage(fmt.Sprintf("%s:%s:%s", MessageAccept, c.id.String(), c.roomId))
+	return nil
 }
 
 // handleCommandStart retrieves `leave` command from client.
@@ -159,7 +161,8 @@ func (c *Client) handleCommandLeave() error {
 	delete(c.hub.rooms[c.roomId], c.id)
 	c.roomId = ""
 	c.ready = false
-	return c.sendOk()
+	c.sendOk()
+	return nil
 }
 
 // handleCommandStart retrieves `ready` command from client.
@@ -171,8 +174,10 @@ func (c *Client) handleCommandReady(command []string) error {
 	c.ready = command[1] == "true"
 	for clientId := range c.hub.rooms[c.roomId] {
 		if c.hub.clients[clientId] != nil && !c.hub.clients[clientId].ready {
-			return c.sendOk()
+			c.sendOk()
+			return nil
 		}
 	}
-	return c.sendTextMessage(MessageReady)
+	c.sendTextMessage(MessageReady)
+	return nil
 }
